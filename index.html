@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dubai Real Estate Analysis - Vega-Lite</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/vega@6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@7"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px;
+      line-height: 1.6;
+      background: #fafafa;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    section {
+      background: white;
+      padding: 24px;
+      margin: 0 0 32px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    .chart {
+      overflow-x: auto;
+      margin: 18px 0;
+    }
+    .question {
+      font-weight: bold;
+      margin-top: 18px;
+    }
+    .answer {
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Dubai Real Estate Analysis Using Vega-Lite</h1>
+
+<section>
+  <h2>Task 1: Transactions by Day of the Week</h2>
+  <div id="task1" class="chart"></div>
+  <div class="question">Question: How many transactions were registered on Fridays within the analysis window?</div>
+  <div class="answer"><strong>Answer:</strong> 6,553 transactions were registered on Fridays.</div>
+</section>
+
+<section>
+  <h2>Task 2: Monthly Sales — Off-Plan vs Existing Properties</h2>
+  <div id="task2" class="chart"></div>
+  <div class="question">Question: In which month is the number of off-plan sales the highest, and how many off-plan sales is it?</div>
+  <div class="answer"><strong>Answer:</strong> September 2025 had the highest number of off-plan sales, with 706 sales.</div>
+</section>
+
+<section>
+  <h2>Task 3: Map of Prices Across Dubai's Communities</h2>
+  <div id="task3" class="chart"></div>
+  <div class="question">Question: Which community has the largest number of sales of units and villas, and how many sales is it? Is this visualization effective in finding this community? Why?</div>
+  <div class="answer"><strong>Answer:</strong> Al Barsha South Fourth has the largest number of unit/villa sales, with 3,925 sales. This visualization is not very effective for finding the community with the most sales because the map color represents median price per square metre, not sales volume. The sales count is available through the tooltip, so finding the maximum requires checking communities individually.</div>
+</section>
+
+<script>
+  const task1Spec = {"$schema": "https://vega.github.io/schema/vega-lite/v6.json", "title": "Transactions by Day of the Week", "width": 700, "height": 350, "data": {"url": "https://raw.githubusercontent.com/sharios/CS333/main/2026-27/Part%202/transactions.csv", "format": {"type": "csv"}}, "transform": [{"calculate": "timeParse(datum.instance_date, '%Y-%m-%d')", "as": "date"}, {"filter": "datum.date >= datetime(2015, 0, 1) && datum.date < datetime(2026, 8, 1)"}, {"calculate": "timeFormat(datum.date, '%A')", "as": "day"}, {"aggregate": [{"op": "count", "as": "transactions"}], "groupby": ["day"]}, {"impute": "transactions", "key": "day", "keyvals": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "value": 0}], "mark": "bar", "encoding": {"x": {"field": "day", "type": "nominal", "sort": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "title": "Day of the Week"}, "y": {"field": "transactions", "type": "quantitative", "title": "Number of Transactions"}, "color": {"field": "day", "type": "nominal", "legend": null}, "tooltip": [{"field": "day", "type": "nominal", "title": "Day"}, {"field": "transactions", "type": "quantitative", "title": "Transactions"}]}, "config": {}};
+  const task2Spec = {"$schema": "https://vega.github.io/schema/vega-lite/v6.json", "title": "Monthly Sales: Off-Plan vs Existing Properties", "width": 700, "height": 350, "data": {"url": "https://raw.githubusercontent.com/sharios/CS333/main/2026-27/Part%202/transactions.csv", "format": {"type": "csv"}}, "transform": [{"calculate": "timeParse(datum.instance_date, '%Y-%m-%d')", "as": "date"}, {"filter": "datum.date >= datetime(2015, 0, 1) && datum.date < datetime(2026, 8, 1)"}, {"filter": "datum.trans_group_en === 'Sales'"}, {"filter": "datum.reg_type_en === 'Off-Plan Properties' || datum.reg_type_en === 'Existing Properties'"}, {"timeUnit": "yearmonth", "field": "date", "as": "month"}, {"aggregate": [{"op": "count", "as": "sales"}], "groupby": ["month", "reg_type_en"]}], "mark": {"type": "line", "point": true}, "encoding": {"x": {"field": "month", "type": "temporal", "title": "Month", "axis": {"format": "%b %Y", "labelAngle": -45, "labelOverlap": true}, "scale": {"domain": ["2015-01-01", "2026-08-31"]}}, "y": {"field": "sales", "type": "quantitative", "title": "Number of Sales"}, "color": {"field": "reg_type_en", "type": "nominal", "title": "Registration Type"}, "tooltip": [{"field": "month", "type": "temporal", "title": "Month", "format": "%B %Y"}, {"field": "reg_type_en", "type": "nominal", "title": "Property Type"}, {"field": "sales", "type": "quantitative", "title": "Sales"}]}, "config": {}};
+  const task3Spec = {"$schema": "https://vega.github.io/schema/vega-lite/v6.json", "title": "Median Sale Price per m² Across Dubai Communities", "width": 700, "height": 500, "projection": {"type": "mercator"}, "layer": [{"data": {"url": "https://raw.githubusercontent.com/sharios/CS333/main/2026-27/Part%202/dubai.geojson", "format": {"type": "json", "property": "features"}}, "mark": {"type": "geoshape", "fill": "#e6e6e6", "stroke": "white", "strokeWidth": 0.7}, "encoding": {"tooltip": [{"field": "properties.CNAME_E", "type": "nominal", "title": "Community"}]}}, {"data": {"url": "https://raw.githubusercontent.com/sharios/CS333/main/2026-27/Part%202/transactions.csv", "format": {"type": "csv"}}, "transform": [{"calculate": "timeParse(datum.instance_date, '%Y-%m-%d')", "as": "date"}, {"filter": "datum.date >= datetime(2015, 0, 1) && datum.date < datetime(2026, 8, 1)"}, {"filter": "datum.trans_group_en === 'Sales'"}, {"filter": "datum.property_type_en === 'Unit' || datum.property_type_en === 'Villa'"}, {"calculate": "toNumber(datum.meter_sale_price)", "as": "price"}, {"aggregate": [{"op": "count", "as": "sales"}, {"op": "median", "field": "price", "as": "median_price"}], "groupby": ["comm_num"]}, {"calculate": "toString(datum.comm_num)", "as": "community_id"}, {"lookup": "community_id", "from": {"data": {"url": "https://raw.githubusercontent.com/sharios/CS333/main/2026-27/Part%202/dubai.geojson", "format": {"type": "json", "property": "features"}}, "key": "properties.COMM_NUM", "fields": ["geometry", "properties"]}}, {"filter": "isValid(datum.geometry)"}], "mark": {"type": "geoshape", "stroke": "white", "strokeWidth": 0.7}, "encoding": {"shape": {"field": "geometry", "type": "geojson"}, "color": {"condition": {"test": "datum.sales >= 100", "field": "median_price", "type": "quantitative", "scale": {"scheme": "blues", "type": "sqrt"}, "legend": {"title": "Median AED/m²", "format": ",.0f"}}, "value": "#d9d9d9"}, "tooltip": [{"field": "properties.CNAME_E", "type": "nominal", "title": "Community"}, {"field": "sales", "type": "quantitative", "title": "Number of Sales", "format": ","}, {"field": "median_price", "type": "quantitative", "title": "Median AED/m²", "format": ",.2f"}]}}], "config": {}};
+
+  vegaEmbed("#task1", task1Spec, {actions: false}).catch(console.error);
+  vegaEmbed("#task2", task2Spec, {actions: false}).catch(console.error);
+  vegaEmbed("#task3", task3Spec, {actions: false}).catch(console.error);
+</script>
+
+</body>
+</html>
